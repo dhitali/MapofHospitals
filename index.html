@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+        <link rel="stylesheet" href="css/qgis2web.css">
+        <link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/filter.css">
+<link rel="stylesheet" href="css/nouislider.min.css">
+        <link rel="stylesheet" href="css/leaflet-control-geocoder.Geocoder.css">
+        <link rel="stylesheet" href="css/leaflet-measure.css">
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        </style>
+        <title>Map Showing the Status of Hospitals In Lumbini Province</title>
+    </head>
+    <body>
+        <div id="map">
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/L.Control.Layers.Tree.min.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet-control-geocoder.Geocoder.js"></script>
+        <script src="js/leaflet-measure.js"></script>
+        <script src="js/tailDT.js"></script>
+<script src="js/nouislider.min.js"></script>
+<script src="js/wNumb.js"></script>
+        <script src="data/Hospital_Clipped_1.js"></script>
+        <script src="data/lumbini_2.js"></script>
+        <script>
+        var highlightLayer;
+        function highlightFeature(e) {
+            highlightLayer = e.target;
+
+            if (e.target.feature.geometry.type === 'LineString' || e.target.feature.geometry.type === 'MultiLineString') {
+              highlightLayer.setStyle({
+                color: '#b7484b',
+              });
+            } else {
+              highlightLayer.setStyle({
+                fillColor: '#b7484b',
+                fillOpacity: 1
+              });
+            }
+            highlightLayer.openPopup();
+        }
+        var map = L.map('map', {
+            zoomControl:true, maxZoom:28, minZoom:1
+        })
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        function removeEmptyRowsFromPopupContent(content, feature) {
+         var tempDiv = document.createElement('div');
+         tempDiv.innerHTML = content;
+         var rows = tempDiv.querySelectorAll('tr');
+         for (var i = 0; i < rows.length; i++) {
+             var td = rows[i].querySelector('td.visible-with-data');
+             var key = td ? td.id : '';
+             if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+                 rows[i].parentNode.removeChild(rows[i]);
+             }
+         }
+         return tempDiv.innerHTML;
+        }
+        document.querySelector(".leaflet-popup-pane").addEventListener("load", function(event) {
+          var tagName = event.target.tagName,
+            popup = map._popup;
+          // Also check if flag is already set.
+          if (tagName === "IMG" && popup && !popup._updated) {
+            popup._updated = true; // Set flag to prevent looping.
+            popup.update();
+          }
+        }, true);
+        var measureControl = new L.Control.Measure({
+            position: 'topleft',
+            primaryLengthUnit: 'meters',
+            secondaryLengthUnit: 'kilometers',
+            primaryAreaUnit: 'sqmeters',
+            secondaryAreaUnit: 'hectares'
+        });
+        measureControl.addTo(map);
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0]
+        .innerHTML = '';
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0]
+        .className += ' fas fa-ruler';
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+            if (bounds_group.getLayers().length) {
+                map.fitBounds(bounds_group.getBounds());
+            }
+        }
+        map.createPane('pane_OpenStreetMap_0');
+        map.getPane('pane_OpenStreetMap_0').style.zIndex = 400;
+        var layer_OpenStreetMap_0 = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            pane: 'pane_OpenStreetMap_0',
+            opacity: 1.0,
+            attribution: '',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 19
+        });
+        layer_OpenStreetMap_0;
+        map.addLayer(layer_OpenStreetMap_0);
+        function pop_Hospital_Clipped_1(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">OBJECTID</th>\
+                        <td>' + (feature.properties['OBJECTID'] !== null ? autolinker.link(feature.properties['OBJECTID'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">full_id</th>\
+                        <td>' + (feature.properties['full_id'] !== null ? autolinker.link(feature.properties['full_id'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">osm_id</th>\
+                        <td>' + (feature.properties['osm_id'] !== null ? autolinker.link(feature.properties['osm_id'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">osm_type</th>\
+                        <td>' + (feature.properties['osm_type'] !== null ? autolinker.link(feature.properties['osm_type'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">amenity</th>\
+                        <td>' + (feature.properties['amenity'] !== null ? autolinker.link(feature.properties['amenity'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">healthcare</th>\
+                        <td>' + (feature.properties['healthcare'] !== null ? autolinker.link(feature.properties['healthcare'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">operator_t</th>\
+                        <td>' + (feature.properties['operator_t'] !== null ? autolinker.link(feature.properties['operator_t'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">name</th>\
+                        <td>' + (feature.properties['name'] !== null ? autolinker.link(feature.properties['name'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+            var popup = layer.getPopup();
+            var content = popup.getContent();
+            var updatedContent = removeEmptyRowsFromPopupContent(content, feature);
+            popup.setContent(updatedContent);
+        }
+
+        function style_Hospital_Clipped_1_0() {
+            return {
+                pane: 'pane_Hospital_Clipped_1',
+        rotationAngle: 0.0,
+        rotationOrigin: 'center center',
+        icon: L.icon({
+            iconUrl: 'markers/Hospital_Clipped_1.svg',
+            iconSize: [15.2, 15.2]
+        }),
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Hospital_Clipped_1');
+        map.getPane('pane_Hospital_Clipped_1').style.zIndex = 401;
+        map.getPane('pane_Hospital_Clipped_1').style['mix-blend-mode'] = 'normal';
+        var layer_Hospital_Clipped_1 = new L.geoJson(json_Hospital_Clipped_1, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Hospital_Clipped_1',
+            layerName: 'layer_Hospital_Clipped_1',
+            pane: 'pane_Hospital_Clipped_1',
+            onEachFeature: pop_Hospital_Clipped_1,
+            pointToLayer: function (feature, latlng) {
+                var context = {
+                    feature: feature,
+                    variables: {}
+                };
+                return L.marker(latlng, style_Hospital_Clipped_1_0(feature));
+            },
+        });
+        bounds_group.addLayer(layer_Hospital_Clipped_1);
+        map.addLayer(layer_Hospital_Clipped_1);
+        function pop_lumbini_2(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Shape_Leng'] !== null ? autolinker.link(feature.properties['Shape_Leng'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Shape_Area'] !== null ? autolinker.link(feature.properties['Shape_Area'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['province_n'] !== null ? autolinker.link(feature.properties['province_n'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Province'] !== null ? autolinker.link(feature.properties['Province'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['weather'] !== null ? autolinker.link(feature.properties['weather'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+            var popup = layer.getPopup();
+            var content = popup.getContent();
+            var updatedContent = removeEmptyRowsFromPopupContent(content, feature);
+            popup.setContent(updatedContent);
+        }
+
+        function style_lumbini_2_0() {
+            return {
+                pane: 'pane_lumbini_2',
+                opacity: 1,
+                color: 'rgba(228,26,28,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 4.0,
+                fillOpacity: 0,
+                interactive: false,
+            }
+        }
+        map.createPane('pane_lumbini_2');
+        map.getPane('pane_lumbini_2').style.zIndex = 402;
+        map.getPane('pane_lumbini_2').style['mix-blend-mode'] = 'normal';
+        var layer_lumbini_2 = new L.geoJson(json_lumbini_2, {
+            attribution: '',
+            interactive: false,
+            dataVar: 'json_lumbini_2',
+            layerName: 'layer_lumbini_2',
+            pane: 'pane_lumbini_2',
+            onEachFeature: pop_lumbini_2,
+            style: style_lumbini_2_0,
+        });
+        bounds_group.addLayer(layer_lumbini_2);
+        map.addLayer(layer_lumbini_2);
+            var title = new L.Control();
+            title.onAdd = function (map) {
+                this._div = L.DomUtil.create('div', 'info');
+                this.update();
+                return this._div;
+            };
+            title.update = function () {
+                this._div.innerHTML = '<h2>Map Showing the Status of Hospitals In Lumbini Province</h2>';
+            };
+            title.addTo(map);
+            var abstract = new L.Control({'position':'bottomleft'});
+            abstract.onAdd = function (map) {
+                this._div = L.DomUtil.create('div',
+                'leaflet-control abstract');
+                this._div.id = 'abstract'
+
+                    abstract.show();
+                    return this._div;
+                };
+                abstract.show = function () {
+                    this._div.classList.remove("abstract");
+                    this._div.classList.add("abstractUncollapsed");
+                    this._div.innerHTML = 'Author :Ishwor Prasad Dhital <br />This map Intend to show the distribution of Health care centres existing in Lumbini Province.';
+            };
+            abstract.addTo(map);
+        var osmGeocoder = new L.Control.Geocoder({
+            collapsed: true,
+            position: 'topleft',
+            text: 'Search',
+            title: 'Testing'
+        }).addTo(map);
+        document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
+        .className += ' fa fa-search';
+        document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
+        .title += 'Search for a place';
+        var baseMaps = {};
+        var overlaysTree = [
+            {label: '<img src="legend/lumbini_2.png" /> lumbini', layer: layer_lumbini_2},
+            {label: '<img src="legend/Hospital_Clipped_1.png" /> Hospital_Clipped', layer: layer_Hospital_Clipped_1},
+            {label: "OpenStreetMap", layer: layer_OpenStreetMap_0},]
+        var lay = L.control.layers.tree(null, overlaysTree,{
+            //namedToggle: true,
+            //selectorBack: false,
+            //closedSymbol: '&#8862; &#x1f5c0;',
+            //openedSymbol: '&#8863; &#x1f5c1;',
+            //collapseAll: 'Collapse all',
+            //expandAll: 'Expand all',
+            collapsed: true,
+        });
+        lay.addTo(map);
+        setBounds();
+        var mapDiv = document.getElementById('map');
+        var row = document.createElement('div');
+        row.className="row";
+        row.id="all";
+        row.style.height = "100%";
+        var col1 = document.createElement('div');
+        col1.className="col9";
+        col1.id = "mapWindow";
+        col1.style.height = "99%";
+        col1.style.width = "80%";
+        col1.style.display = "inline-block";
+        var col2 = document.createElement('div');
+        col2.className="col3";
+        col2.id = "menu";
+        col2.style.display = "inline-block";
+        mapDiv.parentNode.insertBefore(row, mapDiv);
+        document.getElementById("all").appendChild(col1);
+        document.getElementById("all").appendChild(col2);
+        col1.appendChild(mapDiv)
+        var Filters = {"name": "str"};
+        function filterFunc() {
+          map.eachLayer(function(lyr){
+          if ("options" in lyr && "dataVar" in lyr["options"]){
+            features = this[lyr["options"]["dataVar"]].features.slice(0);
+            try{
+              for (key in Filters){
+                keyS = key.replace(/[^a-zA-Z0-9_]/g, "")
+                if (Filters[key] == "str" || Filters[key] == "bool"){
+                  var selection = [];
+                  var options = document.getElementById("sel_" + keyS).options
+                  for (var i=0; i < options.length; i++) {
+                    if (options[i].selected) selection.push(options[i].value);
+                  }
+                    try{
+                      if (key in features[0].properties){
+                        for (i = features.length - 1;
+                          i >= 0; --i){
+                          if (selection.indexOf(
+                          features[i].properties[key])<0
+                          && selection.length>0) {
+                          features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                  }
+                }
+                if (Filters[key] == "int"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (parseInt(features[i].properties[key])
+                          < sliderVals[0]
+                          || parseInt(features[i].properties[key])
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "real"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (features[i].properties[key]
+                          < sliderVals[0]
+                          || features[i].properties[key]
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "date"
+                  || Filters[key] == "datetime"
+                  || Filters[key] == "time"){
+                  try{
+                    if (key in features[0].properties){
+                      HTMLkey = key.replace(/[&\/\\#,+()$~%.'":*?<>{} ]/g, '');
+                      startdate = document.getElementById("dat_" +
+                        HTMLkey + "_date1").value.replace(" ", "T");
+                      enddate = document.getElementById("dat_" +
+                        HTMLkey + "_date2").value.replace(" ", "T");
+                      for (i = features.length - 1; i >= 0; --i){
+                        if (features[i].properties[key] < startdate
+                          || features[i].properties[key] > enddate){
+                          features.splice(i,1);
+                        }
+                      }
+                    }
+                  } catch(err){
+                  }
+                }
+              }
+            } catch(err){
+            }
+          this[lyr["options"]["layerName"]].clearLayers();
+          this[lyr["options"]["layerName"]].addData(features);
+          }
+          })
+        }
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_name = document.createElement('div');
+            div_name.id = "div_name";
+            div_name.className= "filterselect";
+            document.getElementById("menu").appendChild(div_name);
+            sel_name = document.createElement('select');
+            sel_name.multiple = true;
+            sel_name.size = 10;
+            sel_name.id = "sel_name";
+            var name_options_str = "<option value='' unselected></option>";
+            sel_name.onchange = function(){filterFunc()};
+            name_options_str  += '<option value="NULL">NULL</option>';
+            name_options_str  += '<option value="Aadharbhoot swasthya sewa kendra">Aadharbhoot swasthya sewa kendra</option>';
+            name_options_str  += '<option value="Aadharbhut Swasthya Kendra">Aadharbhut Swasthya Kendra</option>';
+            name_options_str  += '<option value="Aadharbhut swasthya Sewa Kendra">Aadharbhut swasthya Sewa Kendra</option>';
+            name_options_str  += '<option value="Aarogya Hospital">Aarogya Hospital</option>';
+            name_options_str  += '<option value="Adharbhut health post">Adharbhut health post</option>';
+            name_options_str  += '<option value="Amarout swasthya chauki">Amarout swasthya chauki</option>';
+            name_options_str  += '<option value="Asharbhut swasthe kendra">Asharbhut swasthe kendra</option>';
+            name_options_str  += '<option value="BBC medical hall">BBC medical hall</option>';
+            name_options_str  += '<option value="Badara dubauliya health post">Badara dubauliya health post</option>';
+            name_options_str  += '<option value="Baidauli health post">Baidauli health post</option>';
+            name_options_str  += '<option value="Bhalward Health Post">Bhalward Health Post</option>';
+            name_options_str  += '<option value="Bhim Hospital">Bhim Hospital</option>';
+            name_options_str  += '<option value="Bhujhawa health post">Bhujhawa health post</option>';
+            name_options_str  += '<option value="Butwal Lion Eye Hospital">Butwal Lion Eye Hospital</option>';
+            name_options_str  += '<option value="Chisapani Hospital">Chisapani Hospital</option>';
+            name_options_str  += '<option value="Corona Specialized Hospital (Temporary)">Corona Specialized Hospital (Temporary)</option>';
+            name_options_str  += '<option value="Crimson">Crimson</option>';
+            name_options_str  += '<option value="Daaunae devi health post">Daaunae devi health post</option>';
+            name_options_str  += '<option value="Dr Binod Nita Kandel Eye Hospital">Dr Binod Nita Kandel Eye Hospital</option>';
+            name_options_str  += '<option value="Dwangpur Health Post">Dwangpur Health Post</option>';
+            name_options_str  += '<option value="Eye Hospital Tamghas">Eye Hospital Tamghas</option>';
+            name_options_str  += '<option value="Gajahada health post">Gajahada health post</option>';
+            name_options_str  += '<option value="Germi health post">Germi health post</option>';
+            name_options_str  += '<option value="Gorusinghe Swastha Chowki">Gorusinghe Swastha Chowki</option>';
+            name_options_str  += '<option value="Government Hospital">Government Hospital</option>';
+            name_options_str  += '<option value="Gulmi District Hospital">Gulmi District Hospital</option>';
+            name_options_str  += '<option value="Guthi parsauni health parsauni">Guthi parsauni health parsauni</option>';
+            name_options_str  += '<option value="Harpur Health Post-Palhinandan-2Harpur">Harpur Health Post-Palhinandan-2Harpur</option>';
+            name_options_str  += '<option value="Hathausha sosata chauki">Hathausha sosata chauki</option>';
+            name_options_str  += '<option value="Hospital Underconstruction">Hospital Underconstruction</option>';
+            name_options_str  += '<option value="Jahada health post">Jahada health post</option>';
+            name_options_str  += '<option value="Jamuwad health post">Jamuwad health post</option>';
+            name_options_str  += '<option value="JanaSewa Medical Hall">JanaSewa Medical Hall</option>';
+            name_options_str  += '<option value="Janata Clinic Palhinandan-2">Janata Clinic Palhinandan-2</option>';
+            name_options_str  += '<option value="Kopawa health post">Kopawa health post</option>';
+            name_options_str  += '<option value="Kushma Health Post-Kushma">Kushma Health Post-Kushma</option>';
+            name_options_str  += '<option value="Lakshmanpur PHCC">Lakshmanpur PHCC</option>';
+            name_options_str  += '<option value="Laxmanghat aadharbhut health post">Laxmanghat aadharbhut health post</option>';
+            name_options_str  += '<option value="Lumbini City Hospital">Lumbini City Hospital</option>';
+            name_options_str  += '<option value="Lumbini Province Hospital लुम्बिनी प्रादेशिक अस्पताल">Lumbini Province Hospital लुम्बिनी प्रादेशिक अस्पताल</option>';
+            name_options_str  += '<option value="MHP Aaglung SHP">MHP Aaglung SHP</option>';
+            name_options_str  += '<option value="MHP Amarpur SHP">MHP Amarpur SHP</option>';
+            name_options_str  += '<option value="MHP Arjee SHP">MHP Arjee SHP</option>';
+            name_options_str  += '<option value="MHP Arkhawang SHP">MHP Arkhawang SHP</option>';
+            name_options_str  += '<option value="MHP Bajkateri SHP">MHP Bajkateri SHP</option>';
+            name_options_str  += '<option value="MHP Dhurkot PHC (PHCC)">MHP Dhurkot PHC (PHCC)</option>';
+            name_options_str  += '<option value="MHP Dohali SHP">MHP Dohali SHP</option>';
+            name_options_str  += '<option value="MHP Dubichaur SHP">MHP Dubichaur SHP</option>';
+            name_options_str  += '<option value="MHP Hadahade SHP">MHP Hadahade SHP</option>';
+            name_options_str  += '<option value="MHP Hastichaur SHP">MHP Hastichaur SHP</option>';
+            name_options_str  += '<option value="MHP Hawangdi HP">MHP Hawangdi HP</option>';
+            name_options_str  += '<option value="MHP Ismarajasthal HP">MHP Ismarajasthal HP</option>';
+            name_options_str  += '<option value="MHP Jaisithok SHP">MHP Jaisithok SHP</option>';
+            name_options_str  += '<option value="MHP Malagiri SHP">MHP Malagiri SHP</option>';
+            name_options_str  += '<option value="MHP Marbhung SHP">MHP Marbhung SHP</option>';
+            name_options_str  += '<option value="MHP Myalpokhari SHP">MHP Myalpokhari SHP</option>';
+            name_options_str  += '<option value="MHP Neta SHP">MHP Neta SHP</option>';
+            name_options_str  += '<option value="MHP Paudhi SHP">MHP Paudhi SHP</option>';
+            name_options_str  += '<option value="MHP Pipaldhara HP">MHP Pipaldhara HP</option>';
+            name_options_str  += '<option value="MHP Purkhot Daha HP">MHP Purkhot Daha HP</option>';
+            name_options_str  += '<option value="MHP Sirseni SHP">MHP Sirseni SHP</option>';
+            name_options_str  += '<option value="MHP Wagla SHP">MHP Wagla SHP</option>';
+            name_options_str  += '<option value="Madhane Community Health Center">Madhane Community Health Center</option>';
+            name_options_str  += '<option value="Maidan Health post">Maidan Health post</option>';
+            name_options_str  += '<option value="Makar health post">Makar health post</option>';
+            name_options_str  += '<option value="Manari Health post">Manari Health post</option>';
+            name_options_str  += '<option value="Manjhariya 10 Bidhyalay nagar">Manjhariya 10 Bidhyalay nagar</option>';
+            name_options_str  += '<option value="Motipur Health Post">Motipur Health Post</option>';
+            name_options_str  += '<option value="Motipurdhada Basic Health Center">Motipurdhada Basic Health Center</option>';
+            name_options_str  += '<option value="Nepal Pariwar Niyojan Sangh Palhinandan-1Rampurawa">Nepal Pariwar Niyojan Sangh Palhinandan-1Rampurawa</option>';
+            name_options_str  += '<option value="Paklihawa health post">Paklihawa health post</option>';
+            name_options_str  += '<option value="Palhi Primary Health care center">Palhi Primary Health care center</option>';
+            name_options_str  += '<option value="Patana Health Post">Patana Health Post</option>';
+            name_options_str  += '<option value="Patauti Health post">Patauti Health post</option>';
+            name_options_str  += '<option value="Pipara Hospital">Pipara Hospital</option>';
+            name_options_str  += '<option value="Pokharathok Helthpost">Pokharathok Helthpost</option>';
+            name_options_str  += '<option value="Pratapkot Health Post">Pratapkot Health Post</option>';
+            name_options_str  += '<option value="Pratappur health post">Pratappur health post</option>';
+            name_options_str  += '<option value="Primary Health Center">Primary Health Center</option>';
+            name_options_str  += '<option value="Primary Hospital, Bahun Thana">Primary Hospital, Bahun Thana</option>';
+            name_options_str  += '<option value="Prithivi Chandra Aspataal">Prithivi Chandra Aspataal</option>';
+            name_options_str  += '<option value="Rampur khadauna health post">Rampur khadauna health post</option>';
+            name_options_str  += '<option value="Rampurawa Health Post Palhinandan-1Rampurawa">Rampurawa Health Post Palhinandan-1Rampurawa</option>';
+            name_options_str  += '<option value="Rapti sub-Regional Hospital">Rapti sub-Regional Hospital</option>';
+            name_options_str  += '<option value="Red Cross Society Tamghas">Red Cross Society Tamghas</option>';
+            name_options_str  += '<option value="Rolpa District Hospital">Rolpa District Hospital</option>';
+            name_options_str  += '<option value="Rukmini Hospital Pvt. Ltd., Chhipridaha">Rukmini Hospital Pvt. Ltd., Chhipridaha</option>';
+            name_options_str  += '<option value="Rupauliya health post">Rupauliya health post</option>';
+            name_options_str  += '<option value="Sahari Swasthya Kendra , Chamkipur">Sahari Swasthya Kendra , Chamkipur</option>';
+            name_options_str  += '<option value="Sahid smirti samudaaik hospital center">Sahid smirti samudaaik hospital center</option>';
+            name_options_str  += '<option value="Sanai health post">Sanai health post</option>';
+            name_options_str  += '<option value="Seauti adhar bhuit sosthaya kendra">Seauti adhar bhuit sosthaya kendra</option>';
+            name_options_str  += '<option value="Siddhartha City Hospital Pvt. Ltd.">Siddhartha City Hospital Pvt. Ltd.</option>';
+            name_options_str  += '<option value="Siddhartha Nagar City Hospital Pvt Ltd">Siddhartha Nagar City Hospital Pvt Ltd</option>';
+            name_options_str  += '<option value="Snake Bite Clinic">Snake Bite Clinic</option>';
+            name_options_str  += '<option value="Thulo khairetwa swathye chauki">Thulo khairetwa swathye chauki</option>';
+            name_options_str  += '<option value="Tulsipur City Hospital">Tulsipur City Hospital</option>';
+            name_options_str  += '<option value="Uttamnagar Basic Health center">Uttamnagar Basic Health center</option>';
+            name_options_str  += '<option value="aadharbhut health post piparpati">aadharbhut health post piparpati</option>';
+            name_options_str  += '<option value="adharbhut swasthya kendra">adharbhut swasthya kendra</option>';
+            name_options_str  += '<option value="bhim">bhim</option>';
+            name_options_str  += '<option value="chisapani aaspatal">chisapani aaspatal</option>';
+            name_options_str  += '<option value="devgawn swast chauki">devgawn swast chauki</option>';
+            name_options_str  += '<option value="guthiparsauni aaurberd aausadhalay">guthiparsauni aaurberd aausadhalay</option>';
+            name_options_str  += '<option value="guthisuryapura health post">guthisuryapura health post</option>';
+            name_options_str  += '<option value="hakuee swasth chauki">hakuee swasth chauki</option>';
+            name_options_str  += '<option value="hospital">hospital</option>';
+            name_options_str  += '<option value="jagarnathpur prathamik kendra">jagarnathpur prathamik kendra</option>';
+            name_options_str  += '<option value="lumbini eyes hospital pra.li">lumbini eyes hospital pra.li</option>';
+            name_options_str  += '<option value="magalapur samudaik swasthe cauki">magalapur samudaik swasthe cauki</option>';
+            name_options_str  += '<option value="manari health post">manari health post</option>';
+            name_options_str  += '<option value="na">na</option>';
+            name_options_str  += '<option value="narsahi helth post">narsahi helth post</option>';
+            name_options_str  += '<option value="ojus hospital">ojus hospital</option>';
+            name_options_str  += '<option value="pachnagar health post">pachnagar health post</option>';
+            name_options_str  += '<option value="sarawal swasthe chauki">sarawal swasthe chauki</option>';
+            name_options_str  += '<option value="sitapur sausty chauki">sitapur sausty chauki</option>';
+            name_options_str  += '<option value="somani health post">somani health post</option>';
+            name_options_str  += '<option value="sowasth chauki hakui">sowasth chauki hakui</option>';
+            name_options_str  += '<option value="susta samudaik swasth ikai kendra">susta samudaik swasth ikai kendra</option>';
+            name_options_str  += '<option value="tilkpur health post">tilkpur health post</option>';
+            name_options_str  += '<option value="अड्गुरि स्वास्थ्य चौकी पाणिनि 7 अर्घाखाँची">अड्गुरि स्वास्थ्य चौकी पाणिनि 7 अर्घाखाँची</option>';
+            name_options_str  += '<option value="अमरबन हेल्थपोस्ट">अमरबन हेल्थपोस्ट</option>';
+            name_options_str  += '<option value="अर्घा स्वास्थ्य चैाकि">अर्घा स्वास्थ्य चैाकि</option>';
+            name_options_str  += '<option value="अर्घाखाँचि हस्पिटल प्रालि">अर्घाखाँचि हस्पिटल प्रालि</option>';
+            name_options_str  += '<option value="अर्घाखाँची पोलिक्लिनिक">अर्घाखाँची पोलिक्लिनिक</option>';
+            name_options_str  += '<option value="अर्घातोस स्वास्थ्य चौकि">अर्घातोस स्वास्थ्य चौकि</option>';
+            name_options_str  += '<option value="असुरकोट स्वास्थ्य चौकी">असुरकोट स्वास्थ्य चौकी</option>';
+            name_options_str  += '<option value="अाधारभूत स्वास्थ्य सेवा केन्द्र">अाधारभूत स्वास्थ्य सेवा केन्द्र</option>';
+            name_options_str  += '<option value="आधारभुत स्वास्थ केन्द्र">आधारभुत स्वास्थ केन्द्र</option>';
+            name_options_str  += '<option value="आधारभुत स्वास्थ सेवा केन्द्र">आधारभुत स्वास्थ सेवा केन्द्र</option>';
+            name_options_str  += '<option value="आधारभुत स्वास्थ सेवा केन्द्र दुन्दुरुक">आधारभुत स्वास्थ सेवा केन्द्र दुन्दुरुक</option>';
+            name_options_str  += '<option value="आधारभुत स्वास्थ्य केन्द्">आधारभुत स्वास्थ्य केन्द्</option>';
+            name_options_str  += '<option value="आधारभुत स्वास्थ्य केन्द्र ,माभिगाँउ भु.न.पा.२">आधारभुत स्वास्थ्य केन्द्र ,माभिगाँउ भु.न.पा.२</option>';
+            name_options_str  += '<option value="आधारभुत स्वास्थ्य केन्द्र शिनपा -१२ रजिया">आधारभुत स्वास्थ्य केन्द्र शिनपा -१२ रजिया</option>';
+            name_options_str  += '<option value="आधारभुत स्वास्थ्य केन्द्र, बबर्पुर">आधारभुत स्वास्थ्य केन्द्र, बबर्पुर</option>';
+            name_options_str  += '<option value="आधारभुत स्वास्थ्य सेवा केन्द्र बामरुक">आधारभुत स्वास्थ्य सेवा केन्द्र बामरुक</option>';
+            name_options_str  += '<option value="आधारभुत स्वास्थ्य सेवा केन्द्र भुमिकास्थान-३ सिख्र">आधारभुत स्वास्थ्य सेवा केन्द्र भुमिकास्थान-३ सिख्र</option>';
+            name_options_str  += '<option value="आधारभूत स्वास्थ्य सेवा केन्द्र">आधारभूत स्वास्थ्य सेवा केन्द्र</option>';
+            name_options_str  += '<option value="आरोग्य प्राकृतिक क्लिनिक">आरोग्य प्राकृतिक क्लिनिक</option>';
+            name_options_str  += '<option value="उरहरी स्वास्थ्य चौकी">उरहरी स्वास्थ्य चौकी</option>';
+            name_options_str  += '<option value="करेचुली">करेचुली</option>';
+            name_options_str  += '<option value="किमडाडा स्वास्थ चौकी">किमडाडा स्वास्थ चौकी</option>';
+            name_options_str  += '<option value="कुर आधारभुत स्वास्थ्य केन्द्र">कुर आधारभुत स्वास्थ्य केन्द्र</option>';
+            name_options_str  += '<option value="केरुङ्गा स्वास्थ्य चौकी">केरुङ्गा स्वास्थ्य चौकी</option>';
+            name_options_str  += '<option value="कोभिड विशेष अस्पताल पुतलाचौर रोल्पा">कोभिड विशेष अस्पताल पुतलाचौर रोल्पा</option>';
+            name_options_str  += '<option value="खन स्वास्थ चौकी">खन स्वास्थ चौकी</option>';
+            name_options_str  += '<option value="खनदह स्वास्थ चौकी">खनदह स्वास्थ चौकी</option>';
+            name_options_str  += '<option value="खयरभट्टि शहरी स्वास्थ केन्द्र">खयरभट्टि शहरी स्वास्थ केन्द्र</option>';
+            name_options_str  += '<option value="खाचिकेाट स्वास्थ्य चैाकि">खाचिकेाट स्वास्थ्य चैाकि</option>';
+            name_options_str  += '<option value="खिदिम स्वास्थ चौकी">खिदिम स्वास्थ चौकी</option>';
+            name_options_str  += '<option value="खिल्जि स्वास्थ्य चैाकि">खिल्जि स्वास्थ्य चैाकि</option>';
+            name_options_str  += '<option value="खोरमोर सामुदायिक शहरी स्वास्थ्य सेवा केन्द्र शितगङ्गा नगरपालिका-१४ खोरमोर अर्घाखाँची">खोरमोर सामुदायिक शहरी स्वास्थ्य सेवा केन्द्र शितगङ्गा नगरपालिका-१४ खोरमोर अर्घाखाँची</option>';
+            name_options_str  += '<option value="गाउँ घर क्लनिक">गाउँ घर क्लनिक</option>';
+            name_options_str  += '<option value="गोखुङ्गा स्वास्थ्य चौकी मालारानी-९">गोखुङ्गा स्वास्थ्य चौकी मालारानी-९</option>';
+            name_options_str  += '<option value="चाबेनेटा सामुदायिक सहरी स्वास्थ्य केन्द्र शिनपा -११">चाबेनेटा सामुदायिक सहरी स्वास्थ्य केन्द्र शिनपा -११</option>';
+            name_options_str  += '<option value="चिदिका स्वास्थ्य चौकी छ्त्रदेब 1 चिदिका">चिदिका स्वास्थ्य चौकी छ्त्रदेब 1 चिदिका</option>';
+            name_options_str  += '<option value="चिनारी अस्पताल">चिनारी अस्पताल</option>';
+            name_options_str  += '<option value="छत्रगन्ज">छत्रगन्ज</option>';
+            name_options_str  += '<option value="छाया पोलिक्लिनिक">छाया पोलिक्लिनिक</option>';
+            name_options_str  += '<option value="छिल्लिकोट सामुदायिक स्वास्थ्य इकाई">छिल्लिकोट सामुदायिक स्वास्थ्य इकाई</option>';
+            name_options_str  += '<option value="जिल्ला अस्पताल अर्घाखाँची">जिल्ला अस्पताल अर्घाखाँची</option>';
+            name_options_str  += '<option value="जिल्ला स्वास्थ कार्यालय जलुके">जिल्ला स्वास्थ कार्यालय जलुके</option>';
+            name_options_str  += '<option value="जुकेना स्वास्थ चौकी">जुकेना स्वास्थ चौकी</option>';
+            name_options_str  += '<option value="जोहाङग प्राथमिक स्वास्थ्य केन्द्र">जोहाङग प्राथमिक स्वास्थ्य केन्द्र</option>';
+            name_options_str  += '<option value="झडि आधारभुत स्वास्थ केन्द्र">झडि आधारभुत स्वास्थ केन्द्र</option>';
+            name_options_str  += '<option value="टरिगाउँ स्वास्थ्य चौकी">टरिगाउँ स्वास्थ्य चौकी</option>';
+            name_options_str  += '<option value="ठुलापोखरा स्वास्थ चौकी">ठुलापोखरा स्वास्थ चौकी</option>';
+            name_options_str  += '<option value="डिभर्ना आयुर्वेद औषधालाय">डिभर्ना आयुर्वेद औषधालाय</option>';
+            name_options_str  += '<option value="डिभर्ना स्वास्थ चौकी">डिभर्ना स्वास्थ चौकी</option>';
+            name_options_str  += '<option value="डुरुवा स्वास्थ्य चौकी">डुरुवा स्वास्थ्य चौकी</option>';
+            name_options_str  += '<option value="डोहोटे सहरी सामुदायिक स्वास्थ्य केन्द्र शिनपा -१२ डोहोटे">डोहोटे सहरी सामुदायिक स्वास्थ्य केन्द्र शिनपा -१२ डोहोटे</option>';
+            name_options_str  += '<option value="ढाकावाङ्ग स्वास्थ्य चौकी भुमेकास्थान-१">ढाकावाङ्ग स्वास्थ्य चौकी भुमेकास्थान-१</option>';
+            name_options_str  += '<option value="ढिकपुर स्वास्थ चौकी">ढिकपुर स्वास्थ चौकी</option>';
+            name_options_str  += '<option value="ढिकुरा स्वाथ्यचौकी भु न पा 9">ढिकुरा स्वाथ्यचौकी भु न पा 9</option>';
+            name_options_str  += '<option value="ढुङ्गेसेरा आधारभुत स्वास्थ्य केन्द्र">ढुङ्गेसेरा आधारभुत स्वास्थ्य केन्द्र</option>';
+            name_options_str  += '<option value="तुलसीपुर सिटी अस्पताल">तुलसीपुर सिटी अस्पताल</option>';
+            name_options_str  += '<option value="तुल्सी बाल अस्पताल">तुल्सी बाल अस्पताल</option>';
+            name_options_str  += '<option value="देउराली आधारभुत स्वास्थ केन्द्र">देउराली आधारभुत स्वास्थ केन्द्र</option>';
+            name_options_str  += '<option value="दोघर्रे स्वास्थ्य चौकी">दोघर्रे स्वास्थ्य चौकी</option>';
+            name_options_str  += '<option value="धन्चौर स्वास्थ्य चाैकि">धन्चौर स्वास्थ्य चाैकि</option>';
+            name_options_str  += '<option value="धरम्पानी आधारभुत स्वास्थ्य केन्द्र">धरम्पानी आधारभुत स्वास्थ्य केन्द्र</option>';
+            name_options_str  += '<option value="धर्ना स्वास्थ्य चौकी">धर्ना स्वास्थ्य चौकी</option>';
+            name_options_str  += '<option value="धातिबङ स्वास्थ्य चौकी पाणिनी 6धातिबङ">धातिबङ स्वास्थ्य चौकी पाणिनी 6धातिबङ</option>';
+            name_options_str  += '<option value="धारपाहिला स्वास्थ चौकि">धारपाहिला स्वास्थ चौकि</option>';
+            name_options_str  += '<option value="धारापानी स्वास्थ्य चौकि भुमिकास्थान ०४">धारापानी स्वास्थ्य चौकि भुमिकास्थान ०४</option>';
+            name_options_str  += '<option value="नागरिक आरोग्य केन्द्र">नागरिक आरोग्य केन्द्र</option>';
+            name_options_str  += '<option value="नागरिक आरोग्य सेवा केन्द्र">नागरिक आरोग्य सेवा केन्द्र</option>';
+            name_options_str  += '<option value="नारायणपुर स्वास्थ प्रवर्धन केन्द्र">नारायणपुर स्वास्थ प्रवर्धन केन्द्र</option>';
+            name_options_str  += '<option value="नुवाकोट स्वास्थ्य चौकी">नुवाकोट स्वास्थ्य चौकी</option>';
+            name_options_str  += '<option value="पञ्चकुले स्वास्थ्य चौकी">पञ्चकुले स्वास्थ्य चौकी</option>';
+            name_options_str  += '<option value="पणेना sth">पणेना sth</option>';
+            name_options_str  += '<option value="पद्मी सामुदायिक स्वास्थ्य केन्द्र">पद्मी सामुदायिक स्वास्थ्य केन्द्र</option>';
+            name_options_str  += '<option value="पवन नगर स्वास्थ्य चौकी">पवन नगर स्वास्थ्य चौकी</option>';
+            name_options_str  += '<option value="पाली स्वास्थ्य चौकी पाणिनी 8">पाली स्वास्थ्य चौकी पाणिनी 8</option>';
+            name_options_str  += '<option value="पावरा आधारभुत स्वास्थ केन्द्र शितगङ्गा नगरपालिका-१४ पावरा अर्घाखाँची">पावरा आधारभुत स्वास्थ केन्द्र शितगङ्गा नगरपालिका-१४ पावरा अर्घाखाँची</option>';
+            name_options_str  += '<option value="पुरनधारा अस्पताल">पुरनधारा अस्पताल</option>';
+            name_options_str  += '<option value="प्रसुती गृह">प्रसुती गृह</option>';
+            name_options_str  += '<option value="प्राथमिक स्वास्थ केन्द्र बल्कोट">प्राथमिक स्वास्थ केन्द्र बल्कोट</option>';
+            name_options_str  += '<option value="प्राथमिक स्वास्थ्य केन्द्र शिनपा-३ठाडा">प्राथमिक स्वास्थ्य केन्द्र शिनपा-३ठाडा</option>';
+            name_options_str  += '<option value="प्रादेशिक आयुर्वेदिक अस्पताल, बिजौरी">प्रादेशिक आयुर्वेदिक अस्पताल, बिजौरी</option>';
+            name_options_str  += '<option value="फुलपाति हंसपुर आधारभूत स्वास्थ्य सेवा केन्द्र">फुलपाति हंसपुर आधारभूत स्वास्थ्य सेवा केन्द्र</option>';
+            name_options_str  += '<option value="बंगलाचुली अस्पताल">बंगलाचुली अस्पताल</option>';
+            name_options_str  += '<option value="बरहनेटा सहरी स्वास्थ्य केन्द्र सनपा-३ बरहनेटा">बरहनेटा सहरी स्वास्थ्य केन्द्र सनपा-३ बरहनेटा</option>';
+            name_options_str  += '<option value="बाँके ढेाडेनि शहरि स्वास्थ्य इकाई">बाँके ढेाडेनि शहरि स्वास्थ्य इकाई</option>';
+            name_options_str  += '<option value="बागि स्वास्थ्य चैाकि">बागि स्वास्थ्य चैाकि</option>';
+            name_options_str  += '<option value="बिजौरी स्वास्थ्य चौकी">बिजौरी स्वास्थ्य चौकी</option>';
+            name_options_str  += '<option value="बिनोद प्याथोलोजी एण्ड ज्योती मेडिकल हल">बिनोद प्याथोलोजी एण्ड ज्योती मेडिकल हल</option>';
+            name_options_str  += '<option value="भगवति स्वास्थ्य चौकि">भगवति स्वास्थ्य चौकि</option>';
+            name_options_str  += '<option value="भालुवाङ अस्पताल">भालुवाङ अस्पताल</option>';
+            name_options_str  += '<option value="भेडामारा उप स्वास्थ चौकी">भेडामारा उप स्वास्थ चौकी</option>';
+            name_options_str  += '<option value="मथुरा आधारभुत स्वस्थ्य ईकाइ स.न.पा.-५ अर्घाखाँची">मथुरा आधारभुत स्वस्थ्य ईकाइ स.न.पा.-५ अर्घाखाँची</option>';
+            name_options_str  += '<option value="मन्द्रे सहरी स्वास्थ्य केन्द्र">मन्द्रे सहरी स्वास्थ्य केन्द्र</option>';
+            name_options_str  += '<option value="मरेङ स्वास्थ्य चौकि">मरेङ स्वास्थ्य चौकि</option>';
+            name_options_str  += '<option value="मर्पा डाडा सहरी स्वास्थ्य केन्द्र">मर्पा डाडा सहरी स्वास्थ्य केन्द्र</option>';
+            name_options_str  += '<option value="मानपुर स्वास्थ्य चौकी">मानपुर स्वास्थ्य चौकी</option>';
+            name_options_str  += '<option value="मायादेवि अस्थायी कोभिड अस्पताल">मायादेवि अस्थायी कोभिड अस्पताल</option>';
+            name_options_str  += '<option value="मितेरी हस्पिटल प्रा लि">मितेरी हस्पिटल प्रा लि</option>';
+            name_options_str  += '<option value="मुसिवान स्वास्थ ईकाइ शितगङ्गा नगरपालिका-१३ मुसिवान">मुसिवान स्वास्थ ईकाइ शितगङ्गा नगरपालिका-१३ मुसिवान</option>';
+            name_options_str  += '<option value="रमेश मेडिकल हल">रमेश मेडिकल हल</option>';
+            name_options_str  += '<option value="राणागाउँ स्वास्थ्य चौकी">राणागाउँ स्वास्थ्य चौकी</option>';
+            name_options_str  += '<option value="राप्तिसोनारी अस्पताल">राप्तिसोनारी अस्पताल</option>';
+            name_options_str  += '<option value="राप्ती आँखा अस्पताल">राप्ती आँखा अस्पताल</option>';
+            name_options_str  += '<option value="राप्ती आयुर्वेदिक अस्पताल">राप्ती आयुर्वेदिक अस्पताल</option>';
+            name_options_str  += '<option value="राप्ती क्षेत्रीय आयुर्वेदिक अस्पताल">राप्ती क्षेत्रीय आयुर्वेदिक अस्पताल</option>';
+            name_options_str  += '<option value="राप्ती प्रादेशिक अस्पताल">राप्ती प्रादेशिक अस्पताल</option>';
+            name_options_str  += '<option value="राप्ती लाइफ केयर अस्पताल">राप्ती लाइफ केयर अस्पताल</option>';
+            name_options_str  += '<option value="रामनगर स्वास्थ चौकी">रामनगर स्वास्थ चौकी</option>';
+            name_options_str  += '<option value="रौनियार अस्पताल र दन्त चिकित्सा क्लिनिक">रौनियार अस्पताल र दन्त चिकित्सा क्लिनिक</option>';
+            name_options_str  += '<option value="लक्ष्मीपुर स्वास्थ्य चौकी">लक्ष्मीपुर स्वास्थ्य चौकी</option>';
+            name_options_str  += '<option value="लमही अस्पताल">लमही अस्पताल</option>';
+            name_options_str  += '<option value="लमही सर्पदंश उपचार केन्द्र">लमही सर्पदंश उपचार केन्द्र</option>';
+            name_options_str  += '<option value="लामापोखरा सामुदायिक स्वास्थ इकाई">लामापोखरा सामुदायिक स्वास्थ इकाई</option>';
+            name_options_str  += '<option value="लौरी सामुदायिक स्वास्थ्य केन्द्र शिनपा-०९लारी">लौरी सामुदायिक स्वास्थ्य केन्द्र शिनपा-०९लारी</option>';
+            name_options_str  += '<option value="वडिदमार सामुदायिक स्वास्थ इकाई">वडिदमार सामुदायिक स्वास्थ इकाई</option>';
+            name_options_str  += '<option value="वाङ्गला स्वास्थ्य चौकि">वाङ्गला स्वास्थ्य चौकि</option>';
+            name_options_str  += '<option value="शहरी स्वास्थय केंद्र">शहरी स्वास्थय केंद्र</option>';
+            name_options_str  += '<option value="शहरी स्वास्थ्य प्रबद्धर्न">शहरी स्वास्थ्य प्रबद्धर्न</option>';
+            name_options_str  += '<option value="शान्तिनगर स्वास्थ्य चौकी">शान्तिनगर स्वास्थ्य चौकी</option>';
+            name_options_str  += '<option value="शिवपुर सहरी स्वस्थ्य केन्द्र">शिवपुर सहरी स्वस्थ्य केन्द्र</option>';
+            name_options_str  += '<option value="श्री रण अम्बिका आँखा अस्पताल">श्री रण अम्बिका आँखा अस्पताल</option>';
+            name_options_str  += '<option value="श्रीगाउँ सामुदायिक स्वास्थ्य सेवा इकाइ">श्रीगाउँ सामुदायिक स्वास्थ्य सेवा इकाइ</option>';
+            name_options_str  += '<option value="सहरी स्वस्थेय केन्द्र झिङ्नी">सहरी स्वस्थेय केन्द्र झिङ्नी</option>';
+            name_options_str  += '<option value="सहरी स्वास्थ केन्द्र, फचकपुर">सहरी स्वास्थ केन्द्र, फचकपुर</option>';
+            name_options_str  += '<option value="सा">सा</option>';
+            name_options_str  += '<option value="सामुदायिक स्वास्थ ईकाइ भर्तापुर">सामुदायिक स्वास्थ ईकाइ भर्तापुर</option>';
+            name_options_str  += '<option value="सामुदायिक स्वास्थ्य इकाइ भु न पा 9 डेबा">सामुदायिक स्वास्थ्य इकाइ भु न पा 9 डेबा</option>';
+            name_options_str  += '<option value="सामुदायिक स्वास्थ्य इकाई भुमिकास्थान-०३थारपाईला">सामुदायिक स्वास्थ्य इकाई भुमिकास्थान-०३थारपाईला</option>';
+            name_options_str  += '<option value="सामुदायिक स्वास्थ्य इकाई, गंगटे">सामुदायिक स्वास्थ्य इकाई, गंगटे</option>';
+            name_options_str  += '<option value="सामुदायिक स्वास्थ्य ईकाइ">सामुदायिक स्वास्थ्य ईकाइ</option>';
+            name_options_str  += '<option value="साम्नेगाउ सामुदायिक स्वास्थ इकाइ">साम्नेगाउ सामुदायिक स्वास्थ इकाइ</option>';
+            name_options_str  += '<option value="सिद्द्धारा स्वास्थ चौकी">सिद्द्धारा स्वास्थ चौकी</option>';
+            name_options_str  += '<option value="सिमल पानी स्वास्थ्य चौकी">सिमल पानी स्वास्थ्य चौकी</option>';
+            name_options_str  += '<option value="सुनवल स्वास्थ्य चाैकी">सुनवल स्वास्थ्य चाैकी</option>';
+            name_options_str  += '<option value="सुवर्णखाल स्वास्थय चौकी">सुवर्णखाल स्वास्थय चौकी</option>';
+            name_options_str  += '<option value="सौडियार स्वस्थ चौकी">सौडियार स्वस्थ चौकी</option>';
+            name_options_str  += '<option value="स्वस्थ्य चौकी , सैघा">स्वस्थ्य चौकी , सैघा</option>';
+            name_options_str  += '<option value="स्वाठी स्वास्थ्य चाैकी">स्वाठी स्वास्थ्य चाैकी</option>';
+            name_options_str  += '<option value="स्वास्थ्य चौकी, बिसौनी डाँडा">स्वास्थ्य चौकी, बिसौनी डाँडा</option>';
+            name_options_str  += '<option value="हरिद्वार सहरी स्वास्थ्य केन्द्र">हरिद्वार सहरी स्वास्थ्य केन्द्र</option>';
+            name_options_str  += '<option value="हर्रे">हर्रे</option>';
+            name_options_str  += '<option value="हापुर स्वास्थ चौकी">हापुर स्वास्थ चौकी</option>';
+            name_options_str  += '<option value="हापुरे प्राथमिक अस्पताल">हापुरे प्राथमिक अस्पताल</option>';
+            name_options_str  += '<option value="हेकुली स्वास्थ्य चौकी">हेकुली स्वास्थ्य चौकी</option>';
+            name_options_str  += '<option value="हेमनगर स्वास्थ्य चौकी">हेमनगर स्वास्थ्य चौकी</option>';
+            name_options_str  += '<option value="हेमन्तपुर नगर स्वास्थ्य केन्द्र">हेमन्तपुर नगर स्वास्थ्य केन्द्र</option>';
+            name_options_str  += '<option value="ह्रराबोट">ह्रराबोट</option>';
+            name_options_str  += '<option value="ॐ पोलिक्लिनिक">ॐ पोलिक्लिनिक</option>';
+            sel_name.innerHTML = name_options_str;
+            div_name.appendChild(sel_name);
+            var lab_name = document.createElement('div');
+            lab_name.innerHTML = 'name';
+            lab_name.className = 'filterlabel';
+            div_name.appendChild(lab_name);
+            var reset_name = document.createElement('div');
+            reset_name.innerHTML = 'clear filter';
+            reset_name.className = 'filterlabel';
+            reset_name.onclick = function() {
+                var options = document.getElementById("sel_name").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_name.appendChild(reset_name);
+        </script>
+    </body>
+</html>
